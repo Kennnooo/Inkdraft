@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draw & Write</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:        #1B2119;
+    --desk:       #202A24;
+    --desk-deep:  #17201B;
+    --parchment:  #EDE4C8;
+    --parchment-2:#E2D6AE;
+    --brass:      #C9A227;
+    --brass-dim:  #8E7420;
+    --rust:       #A63D40;
+    --rust-dim:   #7C2E30;
+    --ink-on-parchment: #26210F;
+    --line: rgba(237,228,200,0.14);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #26332B 0%, var(--desk) 45%, var(--desk-deep) 100%);
+    color: var(--parchment);
+    font-family:'Source Serif 4', serif;
+  }
+  body{
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding: 32px 18px;
+  }
+  /* faint wood-grain / desk texture */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .stage{
+    position:relative; z-index:1;
+    width:100%; max-width:640px;
+    display:flex; flex-direction:column; align-items:center;
+    gap:28px;
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:0.32em; text-transform:uppercase;
+    color: var(--brass);
+    opacity:0.85;
+  }
+
+  h1{
+    font-family:'Special Elite', cursive;
+    font-weight:400;
+    font-size: clamp(28px, 5vw, 40px);
+    margin:0;
+    text-align:center;
+    color: var(--parchment);
+    letter-spacing:0.01em;
+  }
+  h1 .dot{ color: var(--rust); }
+
+  .sub{
+    margin:-14px 0 0 0;
+    font-size:14px;
+    color: rgba(237,228,200,0.55);
+    text-align:center;
+    max-width: 440px;
+  }
+
+  /* ===== Index card ===== */
+  .card-wrap{
+    perspective: 1400px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .card{
+    position:relative;
+    background:
+      linear-gradient(180deg, var(--parchment) 0%, var(--parchment-2) 100%);
+    color: var(--ink-on-parchment);
+    border-radius: 6px;
+    min-height: 190px;
+    padding: 30px 30px 26px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.5) inset,
+      0 22px 40px -14px rgba(0,0,0,0.55),
+      0 4px 10px rgba(0,0,0,0.35);
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    text-align:center;
+    transform-style:preserve-3d;
+    transition: transform 60ms linear;
+    outline: 1px solid rgba(0,0,0,0.06);
+  }
+  .card::before{ /* red ruled line like an index card */
+    content:"";
+    position:absolute; left:22px; right:22px; top:52px;
+    height:1px; background: rgba(166,61,64,0.35);
+  }
+  .card::after{
+    content:"";
+    position:absolute; left:22px; right:22px; bottom:26px;
+    height:1px; background: rgba(166,61,64,0.2);
+  }
+  .card.settled{ animation: settle 260ms ease-out; }
+  @keyframes settle{
+    0%{ transform: scale(1.035) rotate(-0.6deg); }
+    60%{ transform: scale(0.99) rotate(0.3deg); }
+    100%{ transform: scale(1) rotate(0deg); }
+  }
+
+  .card-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; letter-spacing:0.28em; text-transform:uppercase;
+    color: var(--rust-dim);
+    margin-bottom:14px;
+  }
+  .topic-text{
+    font-family:'Special Elite', cursive;
+    font-size: clamp(19px, 4vw, 25px);
+    line-height:1.35;
+    min-height: 68px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .topic-text.placeholder{ color:#7d735a; font-size:16px; font-family:'Source Serif 4', serif; font-style:italic; }
+  .card-count{
+    margin-top:16px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; letter-spacing:0.18em; color:#8a7d5c;
+  }
+
+  /* ===== Buttons ===== */
+  .btn{
+    font-family:'JetBrains Mono', monospace;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    font-size:13px;
+    border-radius:5px;
+    border:1px solid var(--line);
+    background: transparent;
+    color: var(--parchment);
+    padding: 13px 22px;
+    cursor:pointer;
+    transition: transform 120ms ease, background 150ms ease, border-color 150ms ease;
+  }
+  .btn:hover{ border-color: rgba(237,228,200,0.4); background: rgba(237,228,200,0.05); }
+  .btn:active{ transform: translateY(1px) scale(0.98); }
+  .btn:disabled{ opacity:0.35; cursor:not-allowed; }
+
+  .btn-draw{
+    background: var(--brass);
+    color: #201A05;
+    border-color: var(--brass);
+    font-weight:700;
+    padding: 14px 34px;
+    font-size:14px;
+    box-shadow: 0 8px 22px -8px rgba(201,162,39,0.55);
+  }
+  .btn-draw:hover{ background:#DBB233; border-color:#DBB233; }
+  .btn-draw:disabled{ box-shadow:none; }
+
+  .btn-ghost-small{
+    padding: 8px 14px;
+    font-size:11px;
+    color: rgba(237,228,200,0.6);
+  }
+
+  /* ===== Timer ===== */
+  .timer-block{
+    width:100%;
+    display:flex; flex-direction:column; align-items:center;
+    gap:16px;
+    border-top:1px solid var(--line);
+    padding-top:26px;
+  }
+  .timer-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:0.3em; text-transform:uppercase;
+    color: rgba(237,228,200,0.45);
+  }
+  .timer-display{
+    font-family:'JetBrains Mono', monospace;
+    font-size: clamp(52px, 12vw, 78px);
+    font-weight:700;
+    line-height:1;
+    color: var(--parchment);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    transition: color 300ms ease;
+  }
+  .timer-display.warn{ color: var(--rust); }
+  .timer-display.overtime{ color: var(--rust); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.45;} }
+
+  .timer-controls{
+    display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
+  }
+  .timer-add-row{
+    display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
+  }
+
+  footer{
+    margin-top:4px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; letter-spacing:0.1em;
+    color: rgba(237,228,200,0.28);
+    text-align:center;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .card.settled{ animation:none; }
+    .timer-display.overtime{ animation:none; }
+    .btn{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="eyebrow">Writing Sprint</div>
+  <h1>Draw a topic<span class="dot">.</span> Write it up<span class="dot">.</span></h1>
+  <p class="sub">Pull a card, get 60 minutes on the clock, and get a draft onto Substack, Medium, or wherever you publish before time's up.</p>
+
+  <div class="card-wrap">
+    <div class="card" id="card">
+      <div class="card-label" id="cardLabel">Today's Topic</div>
+      <div class="topic-text placeholder" id="topicText">Press Draw to pull a card</div>
+      <div class="card-count" id="cardCount"></div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:12px; align-items:center;">
+    <button class="btn btn-draw" id="drawBtn">🎲 Draw Topic</button>
+    <button class="btn btn-ghost-small" id="reshuffleBtn" title="Clear drawn history so all topics can appear again">Reshuffle deck</button>
+  </div>
+
+  <div class="timer-block">
+    <div class="timer-label">Time Remaining</div>
+    <div class="timer-display" id="timerDisplay">60:00</div>
+
+    <div class="timer-controls">
+      <button class="btn" id="startPauseBtn">Start</button>
+      <button class="btn" id="resetBtn">Reset to 60:00</button>
+    </div>
+    <div class="timer-add-row">
+      <button class="btn" id="add5Btn">+ 5 min</button>
+      <button class="btn" id="add10Btn">+ 10 min</button>
+      <button class="btn" id="add15Btn">+ 15 min</button>
+    </div>
+  </div>
+
+  <footer>DRAW → WRITE → PUBLISH</footer>
+</div>
+
+<script>
+  const TOPICS = [
+    // Personal / reflective
+    "The last thing you changed your mind about",
+    "A skill you learned the hard way",
+    "The most useless advice you ever followed",
+    "A habit you quit and don't miss",
+    "Something you believed as a kid that turned out to be wrong",
+    "The best piece of criticism you ever received",
+    "A decision you made that surprised even you",
+    "What you'd tell yourself five years ago",
+    "A rule you break on purpose",
+    "The apology you never got (and made peace with)",
+    // Work / productivity
+    "Why most advice about productivity is wrong",
+    "The meeting that should have been an email — and why we keep having them",
+    "What burnout actually feels like, minute by minute",
+    "The tool you stopped using and why",
+    "A job you're glad you quit",
+    "The worst interview question and what it reveals",
+    "Why deadlines make people worse at their jobs",
+    "The myth of the 10x employee",
+    "What nobody tells you about your first year at a new job",
+    "Office politics: survival guide for the conflict-averse",
+    // Technology
+    "Why your phone is designed to make you anxious",
+    "The app you deleted and never missed",
+    "What AI still can't do, and probably shouldn't try to",
+    "The last piece of technology that genuinely surprised you",
+    "Why notifications are a design failure, not a feature",
+    "The internet before algorithms decided what you'd see",
+    "A conspiracy theory about your own attention span",
+    "Why password managers are the most underrated software",
+    "The most overrated gadget of the last decade",
+    "What a slower internet taught you that a fast one didn't",
+    // Culture / society
+    "Why nostalgia is a trap",
+    "The unwritten rules of your hometown",
+    "A tradition you'd happily let die",
+    "Why small talk is more important than we admit",
+    "The last time a stranger changed your day",
+    "What your generation gets wrong about the one before it",
+    "A cultural export from your country the world doesn't know about",
+    "Why everyone secretly wants to be told what to do",
+    "The etiquette nobody agreed on but everyone judges you for",
+    "What silence means in different rooms you've been in",
+    // Money
+    "The financial advice that actually worked for you",
+    "Why 'follow your passion' is dangerous career advice",
+    "A purchase you regret and one you don't",
+    "What being broke taught you that having money didn't",
+    "The real cost of convenience",
+    "Why budgeting apps don't fix spending problems",
+    "A negotiation you won by accident",
+    "The price of admission to your own hobbies",
+    "What you'd do with an unexpected windfall, honestly",
+    "The subscription you keep meaning to cancel",
+    // Food
+    "The dish that defines your childhood",
+    "Why home cooking is a form of control",
+    "A meal that ended a bad day",
+    "The most overrated food trend you've lived through",
+    "What your fridge says about your week",
+    "Cooking for one: the case against giving up",
+    "The recipe you'll never get exactly right, and that's fine",
+    "Why restaurants are theater as much as food",
+    "A food memory tied to someone you've lost touch with",
+    "The snack that got you through a hard project",
+    // Creativity / writing
+    "Why perfectionism kills more projects than laziness does",
+    "The first draft nobody should see",
+    "What copying great work teaches you that originality can't",
+    "A creative habit you're embarrassed to admit works",
+    "Why constraints make better art than freedom does",
+    "The critique that changed how you make things",
+    "What writer's block is actually about",
+    "The unfinished project you still think about",
+    "Why showing your work in progress is terrifying and useful",
+    "A creative rule you break every time",
+    // Relationships
+    "The friendship that faded without a fight",
+    "What you learned from a bad roommate",
+    "Why 'just be yourself' is incomplete advice",
+    "A boundary you had to learn to set",
+    "The best fight you ever had with someone you love",
+    "What long-distance anything teaches you about attention",
+    "A mentor who never knew they were one",
+    "The compliment you still think about",
+    "Why some people are easy to love and hard to live with",
+    "What you owe the people who knew you before you changed",
+    // Big ideas
+    "Why progress doesn't feel like progress while it's happening",
+    "The case for doing things the slow way",
+    "What we lose when we optimize everything",
+    "Why every generation thinks it invented adulthood",
+    "The line between confidence and denial",
+    "What luck actually explains in your life",
+    "Why comfort is more dangerous than failure",
+    "The idea you changed your mind about this year",
+    "What growing up in your city taught you about people",
+    "Why nobody feels like a real adult, even the ones who look like it",
+    // Health / body
+    "What your body does better now than it did ten years ago",
+    "The exercise you actually enjoy and won't admit to",
+    "Why sleep advice ignores how most people actually live",
+    "A health scare that changed how you live, even a little",
+    "What rest looks like when you're bad at resting",
+    "The wellness trend you tried and abandoned",
+    "Why pain teaches faster than comfort does",
+    "What your energy levels are trying to tell you",
+    "The injury that taught you patience",
+    "A quiet ritual that keeps you sane",
+    // Easy / low-stakes (quick, fun, no research needed)
+    "My favorite season and why",
+    "The best sandwich combination, defended properly",
+    "A movie I could rewatch forever",
+    "Cats vs dogs, and why the debate is dumb anyway",
+    "The most underrated household item",
+    "My ideal lazy Sunday, hour by hour",
+    "Three songs that instantly put me in a good mood",
+    "The best thing about where I live",
+    "A game I played as a kid that I still think about",
+    "Why I will always order dessert",
+    "The one app on my phone I'd keep if I lost all the rest",
+    "My unpopular opinion about a popular snack",
+    "The best gift I ever gave, not received",
+    "A word I love saying out loud",
+    "What my perfect coffee order says about me",
+    // Philosophical
+    "Is it possible to be truly selfless?",
+    "What do we actually owe strangers?",
+    "Free will: comforting illusion or real thing?",
+    "Why does suffering make some people wiser and others bitter?",
+    "Is a life examined too closely worth living?",
+    "What makes a promise binding once the moment has passed?",
+    "Can you know yourself without other people as a mirror?",
+    "Is fairness a discovery or an invention?",
+    "What do we owe to people who will exist after we're gone?",
+    "Is boredom a problem to solve or a signal to listen to?",
+    "Does meaning have to be earned, or can it just be given?",
+    "What separates a good person from a person who does good things?",
+    "Is authenticity overrated?",
+    "Can a happy life be built on a false belief?",
+    "What does it mean to forgive someone who isn't sorry?",
+    // Political (present the case for a position or explain a debate fairly)
+    "Should voting be mandatory?",
+    "The case for and against term limits",
+    "How much should past behavior disqualify someone from public office?",
+    "Should social media platforms be regulated like utilities?",
+    "The argument for and against a universal basic income",
+    "How should democracies handle disinformation without becoming censors?",
+    "Should local elections matter more to people than they currently do?",
+    "The case for ranked-choice voting",
+    "Where should the line be between free speech and public safety?",
+    "Should there be an age limit for elected office, on either end?",
+    "The tension between privacy and national security, explained fairly",
+    "Should political donations be public information?",
+    // Geopolitical
+    "Why do supply chains have become a matter of national security?",
+    "What does it mean for a country to be 'non-aligned' today?",
+    "How do small nations exert influence disproportionate to their size?",
+    "Why water access is becoming a geopolitical flashpoint",
+    "What history explains a current border dispute somewhere in the world?",
+    "How do sanctions actually work, and who really bears the cost?",
+    "Why space is becoming contested geopolitical territory",
+    "What role do diasporas play in shaping foreign policy?",
+    "How does energy dependence shape a country's alliances?",
+    "Why some regions industrialized rapidly while their neighbors didn't",
+    "What does 'soft power' actually buy a country?",
+    "How trade routes have shaped conflict throughout history",
+    // Books / literature
+    "A book that changed how you argue with people",
+    "The book you pretend to have finished",
+    "Why a certain classic is overrated, argued in good faith",
+    "A children's book that holds up disturbingly well as an adult",
+    "The fictional character you've thought about the most",
+    "A book you loved that everyone else seemed to hate",
+    "What rereading an old favorite taught you about yourself now",
+    "The ending you wish had been different, and why",
+    "A book that made you distrust the narrator, on purpose",
+    "Why short stories deserve more respect than they get",
+    "The author whose sentences you'd recognize blind",
+    "A book that explains a place better than visiting it would",
+    "Translated fiction: what gets lost, and what gets found",
+    "The book you'd assign if you taught one class, and why",
+  ];
+
+  /* ---------------- Card draw logic ---------------- */
+  const cardEl = document.getElementById('card');
+  const topicTextEl = document.getElementById('topicText');
+  const cardCountEl = document.getElementById('cardCount');
+  const drawBtn = document.getElementById('drawBtn');
+  const reshuffleBtn = document.getElementById('reshuffleBtn');
+
+  let deck = shuffle([...TOPICS]);
+  let drawnCount = 0;
+  let drawing = false;
+
+  function shuffle(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function updateCount(){
+    cardCountEl.textContent = `${drawnCount} / ${TOPICS.length} drawn`;
+  }
+
+  function drawTopic(){
+    if(drawing) return;
+    if(deck.length === 0){ deck = shuffle([...TOPICS]); drawnCount = 0; }
+
+    drawing = true;
+    drawBtn.disabled = true;
+    cardEl.classList.remove('settled');
+    topicTextEl.classList.remove('placeholder');
+
+    const finalTopic = deck.pop();
+    drawnCount++;
+
+    let ticks = 0;
+    const totalTicks = 22;
+    const shuffled = shuffle([...TOPICS]);
+
+    const interval = setInterval(() => {
+      ticks++;
+      // slow down toward the end
+      topicTextEl.textContent = shuffled[ticks % shuffled.length];
+      cardEl.style.transform = `rotate(${(ticks % 2 === 0 ? -1 : 1) * (1.2 - ticks/totalTicks)}deg)`;
+
+      if(ticks >= totalTicks){
+        clearInterval(interval);
+        topicTextEl.textContent = finalTopic;
+        cardEl.style.transform = 'rotate(0deg)';
+        cardEl.classList.add('settled');
+        updateCount();
+        drawing = false;
+        drawBtn.disabled = false;
+      }
+    }, ticks < totalTicks * 0.6 ? 45 : 90);
+  }
+
+  drawBtn.addEventListener('click', drawTopic);
+  reshuffleBtn.addEventListener('click', () => {
+    deck = shuffle([...TOPICS]);
+    drawnCount = 0;
+    updateCount();
+  });
+  updateCount();
+
+  /* ---------------- Timer logic ---------------- */
+  const timerDisplay = document.getElementById('timerDisplay');
+  const startPauseBtn = document.getElementById('startPauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const add5Btn = document.getElementById('add5Btn');
+  const add10Btn = document.getElementById('add10Btn');
+  const add15Btn = document.getElementById('add15Btn');
+
+  const DEFAULT_SECONDS = 60 * 60;
+  let remaining = DEFAULT_SECONDS;
+  let running = false;
+  let tickHandle = null;
+  let overtime = false;
+
+  function formatTime(totalSeconds){
+    const neg = totalSeconds < 0;
+    const abs = Math.abs(totalSeconds);
+    const m = Math.floor(abs / 60);
+    const s = abs % 60;
+    return (neg ? '-' : '') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+
+  function renderTimer(){
+    timerDisplay.textContent = formatTime(remaining);
+    timerDisplay.classList.toggle('warn', remaining <= 300 && remaining > 0);
+    timerDisplay.classList.toggle('overtime', remaining <= 0);
+  }
+
+  function tick(){
+    remaining -= 1;
+    renderTimer();
+  }
+
+  function startTimer(){
+    if(running) return;
+    running = true;
+    startPauseBtn.textContent = 'Pause';
+    tickHandle = setInterval(tick, 1000);
+  }
+  function pauseTimer(){
+    running = false;
+    startPauseBtn.textContent = 'Resume';
+    clearInterval(tickHandle);
+  }
+  function resetTimer(){
+    pauseTimer();
+    remaining = DEFAULT_SECONDS;
+    startPauseBtn.textContent = 'Start';
+    renderTimer();
+  }
+  function addTime(mins){
+    remaining += mins * 60;
+    renderTimer();
+  }
+
+  startPauseBtn.addEventListener('click', () => running ? pauseTimer() : startTimer());
+  resetBtn.addEventListener('click', resetTimer);
+  add5Btn.addEventListener('click', () => addTime(5));
+  add10Btn.addEventListener('click', () => addTime(10));
+  add15Btn.addEventListener('click', () => addTime(15));
+
+  renderTimer();
+</script>
+
+</body>
+</html>
