@@ -21,3 +21,6 @@ Built as one self-contained `index.html` file — no npm install, no server, no 
 4. Write your article in Substack, Medium, or wherever you publish.
 5. Use **+5 / +10 / +15 min** if you need more time.
 6. Click **Reset to 60:00** to start a fresh sprint, or **Draw Topic** again for a new prompt.
+
+## LICENSE
+This project is under MIT License.
